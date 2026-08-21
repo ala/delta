@@ -79,9 +79,28 @@ object DeltaThrowableHelper
    */
   def getMessage(errorClass: String, messageParameters: Array[String]): String = {
     validateParameterValues(errorClass, errorSubClass = null, messageParameters)
-    val template = errorClassReader.getMessageTemplate(errorClass)
+    val template = getMessageTemplate(errorClass)
     val message = formatMessage(errorClass, messageParameters, template)
     s"[$errorClass] $message"
+  }
+
+  /**
+   * Returns the message template for the given error class, like
+   * [[ErrorClassesJsonReader.getMessageTemplate]], but additionally allows a "bare" main error
+   * class (MAIN_CLASS) to be used even when it defines sub-error classes. Spark's reader asserts
+   * that a sub-class is provided if and only if the main class defines sub-classes; for the bare
+   * case we instead return just the main-class message template. This lets Delta raise an error
+   * with only the main error class even though more specific sub-classes exist.
+   */
+  private def getMessageTemplate(errorClass: String): String = {
+    if (errorClass.contains(".")) {
+      // MAIN_CLASS.SUB_CLASS: combine main and sub templates via Spark's reader.
+      errorClassReader.getMessageTemplate(errorClass)
+    } else {
+      // Bare MAIN_CLASS: use just the main template, which does not assert that the main class
+      // has no sub-classes.
+      getMainMessageTemplate(errorClass)
+    }
   }
 
   private def formatMessage(
@@ -174,7 +193,7 @@ object DeltaThrowableHelper
     } else {
       errorClass + "." + errorSubClass
     }
-    val parameterizedMessage = errorClassReader.getMessageTemplate(wholeErrorClass)
+    val parameterizedMessage = getMessageTemplate(wholeErrorClass)
     parsePrameterNamesFromParameterizedMessage(parameterizedMessage)
   }
 
