@@ -2208,6 +2208,20 @@ trait DeltaErrorsSuiteBase
       checkError(e, "DELTA_INVALID_INTERVAL", "22006", Map("interval" -> "interval1"))
     }
     {
+      val e = intercept[DeltaIllegalArgumentException] {
+        throw new DeltaIllegalArgumentException(
+          errorClass = "DELTA_CONCURRENT_APPEND",
+          messageParameters = Array("op1", "t1", "v1"))
+      }
+      checkError(
+        e,
+        "DELTA_CONCURRENT_APPEND",
+        "2D521",
+        Map("operation" -> "op1", "tableName" -> "t1", "version" -> "v1"))
+      assert(e.getMessage == "[DELTA_CONCURRENT_APPEND] Transaction conflict detected. " +
+        "a concurrent op1 added data to table t1 committed at version v1.")
+    }
+    {
       val e = intercept[DeltaAnalysisException] {
         throw DeltaErrors.cdcWriteNotAllowedInThisVersion
       }
