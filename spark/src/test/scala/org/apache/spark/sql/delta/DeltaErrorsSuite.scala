@@ -3002,9 +3002,13 @@ trait DeltaErrorsSuiteBase
         messageParameters = Array("op1", "t1", "v1"))
     }
     // Assert getMessage directly rather than via checkError: the point is to verify that getMessage
-    // itself renders a bare class that has subclasses, which checkError does not exercise.
-    assert(e.getMessage == "[DELTA_CONCURRENT_APPEND] Transaction conflict detected. " +
-      "a concurrent op1 added data to table t1 committed at version v1.")
+    // itself renders a bare class that has subclasses, which checkError does not exercise. Derive
+    // the expected text from the template so it is not sensitive to the message wording.
+    val expectedMessage = "[DELTA_CONCURRENT_APPEND] " + mainTemplate
+      .replace("<operation>", "op1")
+      .replace("<tableName>", "t1")
+      .replace("<version>", "v1")
+    assert(e.getMessage == expectedMessage)
   }
 
   test("throwChangelogReadFailed preserves SparkThrowable cause and wraps others") {
