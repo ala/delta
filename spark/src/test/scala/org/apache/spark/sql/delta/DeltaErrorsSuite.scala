@@ -2208,20 +2208,6 @@ trait DeltaErrorsSuiteBase
       checkError(e, "DELTA_INVALID_INTERVAL", "22006", Map("interval" -> "interval1"))
     }
     {
-      val e = intercept[DeltaIllegalArgumentException] {
-        throw new DeltaIllegalArgumentException(
-          errorClass = "DELTA_CONCURRENT_APPEND",
-          messageParameters = Array("op1", "t1", "v1"))
-      }
-      checkError(
-        e,
-        "DELTA_CONCURRENT_APPEND",
-        "2D521",
-        Map("operation" -> "op1", "tableName" -> "t1", "version" -> "v1"))
-      assert(e.getMessage == "[DELTA_CONCURRENT_APPEND] Transaction conflict detected. " +
-        "a concurrent op1 added data to table t1 committed at version v1.")
-    }
-    {
       val e = intercept[DeltaAnalysisException] {
         throw DeltaErrors.cdcWriteNotAllowedInThisVersion
       }
@@ -2997,6 +2983,28 @@ trait DeltaErrorsSuiteBase
         DeltaErrors.multipleSourceRowMatchingTargetRowInMergeException(newSession)
       assert(exceptionWithoutContext.getMessage.contains("https") === false)
     }
+  }
+
+  test("raising error class without subclass when subclasses exist") {
+    val mainTemplate = DeltaThrowableHelper.getMainMessageTemplate("DELTA_CONCURRENT_APPEND")
+    val subTemplate =
+      DeltaThrowableHelper.getSubMessageTemplate("DELTA_CONCURRENT_APPEND.WITHOUT_HINT")
+    // DELTA_CONCURRENT_APPEND defines subclasses, so a fully-qualified subclass extends the
+    // main-class template. This guards that the test exercises the has-subclasses scenario.
+    assert(subTemplate.nonEmpty)
+    assert(DeltaThrowableHelper.getMessageTemplate("DELTA_CONCURRENT_APPEND") == mainTemplate)
+    assert(DeltaThrowableHelper.getMessageTemplate("DELTA_CONCURRENT_APPEND.WITHOUT_HINT") ==
+      mainTemplate + " " + subTemplate)
+
+    val e = intercept[DeltaIllegalArgumentException] {
+      throw new DeltaIllegalArgumentException(
+        errorClass = "DELTA_CONCURRENT_APPEND",
+        messageParameters = Array("op1", "t1", "v1"))
+    }
+    // Assert getMessage directly rather than via checkError: the point is to verify that getMessage
+    // itself renders a bare class that has subclasses, which checkError does not exercise.
+    assert(e.getMessage == "[DELTA_CONCURRENT_APPEND] Transaction conflict detected. " +
+      "a concurrent op1 added data to table t1 committed at version v1.")
   }
 
   test("throwChangelogReadFailed preserves SparkThrowable cause and wraps others") {

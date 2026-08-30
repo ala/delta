@@ -92,7 +92,7 @@ object DeltaThrowableHelper
    * case we instead return just the main-class message template. This lets Delta raise an error
    * with only the main error class even though more specific sub-classes exist.
    */
-  private def getMessageTemplate(errorClass: String): String = {
+  private[delta] def getMessageTemplate(errorClass: String): String = {
     if (errorClass.contains(".")) {
       // MAIN_CLASS.SUB_CLASS: combine main and sub templates via Spark's reader.
       errorClassReader.getMessageTemplate(errorClass)
