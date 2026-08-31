@@ -2986,29 +2986,23 @@ trait DeltaErrorsSuiteBase
   }
 
   test("raising error class without subclass when subclasses exist") {
-    val mainTemplate = DeltaThrowableHelper.getMainMessageTemplate("DELTA_CONCURRENT_APPEND")
-    val subTemplate =
-      DeltaThrowableHelper.getSubMessageTemplate("DELTA_CONCURRENT_APPEND.WITHOUT_HINT")
-    // DELTA_CONCURRENT_APPEND defines subclasses, so a fully-qualified subclass extends the
+    // DELTA_METADATA_MISMATCH defines subclasses, so a fully-qualified subclass extends the
     // main-class template. This guards that the test exercises the has-subclasses scenario.
+    val mainTemplate = DeltaThrowableHelper.getMainMessageTemplate("DELTA_METADATA_MISMATCH")
+    val subTemplate =
+      DeltaThrowableHelper.getSubMessageTemplate("DELTA_METADATA_MISMATCH.SCHEMA_MISMATCH")
     assert(subTemplate.nonEmpty)
-    assert(DeltaThrowableHelper.getMessageTemplate("DELTA_CONCURRENT_APPEND") == mainTemplate)
-    assert(DeltaThrowableHelper.getMessageTemplate("DELTA_CONCURRENT_APPEND.WITHOUT_HINT") ==
+    assert(DeltaThrowableHelper.getMessageTemplate("DELTA_METADATA_MISMATCH") == mainTemplate)
+    assert(DeltaThrowableHelper.getMessageTemplate("DELTA_METADATA_MISMATCH.SCHEMA_MISMATCH") ==
       mainTemplate + " " + subTemplate)
 
     val e = intercept[DeltaIllegalArgumentException] {
-      throw new DeltaIllegalArgumentException(
-        errorClass = "DELTA_CONCURRENT_APPEND",
-        messageParameters = Array("op1", "t1", "v1"))
+      throw new DeltaIllegalArgumentException(errorClass = "DELTA_METADATA_MISMATCH")
     }
+    assert(e.getErrorClass == "DELTA_METADATA_MISMATCH")
     // Assert getMessage directly rather than via checkError: the point is to verify that getMessage
-    // itself renders a bare class that has subclasses, which checkError does not exercise. Derive
-    // the expected text from the template so it is not sensitive to the message wording.
-    val expectedMessage = "[DELTA_CONCURRENT_APPEND] " + mainTemplate
-      .replace("<operation>", "op1")
-      .replace("<tableName>", "t1")
-      .replace("<version>", "v1")
-    assert(e.getMessage == expectedMessage)
+    // itself renders a bare class that has subclasses, which checkError does not exercise.
+    assert(e.getMessage == "[DELTA_METADATA_MISMATCH] " + mainTemplate)
   }
 
   test("throwChangelogReadFailed preserves SparkThrowable cause and wraps others") {
